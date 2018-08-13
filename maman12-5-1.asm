@@ -64,7 +64,9 @@ main:
 		sw $t1,b_eq #store incremented counter
 		
 		#check_same_registers and print message
-
+		lw $a0, theCode($s0)
+		move $a1,$s0
+		jal handle_same_register
 		j count_i
 	#if lw check if rt=0 then increament lw counter then jump to i type counter logic
 	check_is_lw:
@@ -141,6 +143,23 @@ printTable:
 	
 j End
 
+#check if rt and rs are equal and print message if true (to use if beq)
+#params $a0: instraction code
+#params $a1: counter
+handle_same_register:
+	#pre
+	addi $sp,$sp,-12 #mark space on stack
+	sw $ra,0($sp) #save return addres
+	sw $a1,4($sp) #save $a1 params (the loop index)
+	sw $s0,8($sp) #save $s0
+	#body
+	jal get_rt
+	
+	#end
+	lw $ra,0($sp) #load return address
+	lw $s0,8($sp) #load $s0
+	addi $sp,$sp,12 #free stack space
+	jr $ra
 
 #counts register in rs_field
 #params $a0: instraction code
