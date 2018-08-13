@@ -1,16 +1,15 @@
 .data
 theCode: .word 0X11090006,0xad490004,0x018d5820,0x032dc020,0x032dc021,0x018d5824,0x8d6d0000,0xffffffff
-helperArr: .space 144 #initialize to maximum size (4 different commands+(32 registers (not all needed but doesnt add to much space to add them all)))*(2 bytes for descriptor +2 bytes for value) = (4+32)*4=144
 
 #create an array of pointers to command counter addresses
 Command_counter_Addresses_Array: .word R_type,l_w,s_w,b_eq
 #create an array counters each coresponding to a register Register_counter_Array[0] coresponds to $0 Register_counter_Array[1] coresponds to $1 etc.
-Register_counter_Array: .byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 
+Register_counter_Array: .word 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,-1
 #command counters
 R_type: .word 0
-l_w: .byte 0
-s_w: .byte 0
-b_eq: .byte 0
+l_w: .word 0
+s_w: .word 0
+b_eq: .word 0
 
 #other string constants
 newline: .asciiz "\n"
@@ -25,9 +24,22 @@ main:
 #loop throw theCode Array and count 
 	addi $s0,$zero,0 #initialize the array index 
 	countingLoop:
-	##### the code printing the register numbers is used for test only!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!11
+	
+	
+
 	lw $t0,theCode($s0)
+	
+	
 	beq $t0,-1,End # if on last command finish loop (uses the fact that the last theCode array item is 0xffffffff)
+	##### the code printing the register numbers is used for test only!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!11
+	
+	#if R type check if rd=0 and count registers of r type
+	jal is_R_type
+	#if beq check if registers are equal and increament beq counter then jump to i type counter logic
+	
+	#if lw check if rt=0 then increament lw counter then jump to i type counter logic
+	
+	#if sw increament sw counter then jump to i type counter logic
 	
 	lw $a0,theCode($s0)
 	jal get_rs
@@ -79,8 +91,28 @@ main:
 	j countingLoop
 
 
+#return 1 for R type and 0 for other (in $v0)
+#params $a0: instraction code
+is_R_type:
+	#pre
+	addi $sp,$sp,-4 #mark space on stack
+	sw $ra,0($sp) #save return addres
+	#body
+	jal get_op_code# $v0 gets to be the op_code field
+	beq $v0,0,R_type_instraction #if R type branch to R_type_instraction
+	#else (not R-type)
+		addi $v0,$zero,0
+		j end_is_R_type
+	R_type_instraction:
+		addi $v0,$zero,1
+	#end
+	end_is_R_type
+	lw $ra,0($sp) #load return address
+	addi $sp,$sp,4 #free stack space
+	
+	
 #counts registers in R_type command
-#params $a0: command code $a1 is shift
+#params $a0: command code 
 count_registers_in_R_type_command:
 	#pre
 	addi $sp,$sp,-4 #mark space on stack
