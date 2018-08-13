@@ -12,8 +12,15 @@ s_w: .word 0
 b_eq: .word 0
 
 #other string constants
+tableHead:.asciiz       "inst code/reg             appearances"
+tableSpaces:.asciiz     "                                "
+R_type_str:.asciiz      "R-type                           "
+beq_str:.asciiz         "beq                              "
+lw_str:.asciiz          "lw                               "
+sw_str:.asciiz          "sw                               "
 newline: .asciiz "\n"
 comma: .asciiz ","
+one_space:.asciiz " "
 
 
 
@@ -111,16 +118,27 @@ printTable:
 	printTableRegisterLoop:
 		lw $t0, Register_counter_Array($s0)
 		beq $t0,-1,end_printTableRegisterLoop
-		addi $a0,$s0,0 #load register code to $a0 for printing
-		jal printInt
+
+		sra $s1,$s0,2#divide by 4 to get the register code (devide by shifting to places to the left)
+		move $a0,$s1
+		jal printInt #print register code
 		
-		#print spaces
-		jal printSpaces
+		jal printSpaces	#print spaces
+		#allign numbers (for register code with two digits)
+		bge $s1,10,dont_add_space
+			la $a0,one_space
+			jal printStr
+		
+		dont_add_space:
+		
+		
 		#print value of counter
 		lw $a0, Register_counter_Array($s0)
 		jal printInt
 		
 		jal printNewLine
+		
+		addi $s0,$s0,4
 		j printTableRegisterLoop
 	end_printTableRegisterLoop:
 	
@@ -146,6 +164,7 @@ is_R_type:
 	end_is_R_type:
 	lw $ra,0($sp) #load return address
 	addi $sp,$sp,4 #free stack space
+	jr $ra
 	
 	
 #counts registers in R_type command
@@ -203,13 +222,54 @@ get_funct:
 	and $t0,$t0,$a0 #apply mask to command
 	jr $ra
 	
-#maps regiter codes to counter address
-#params $a0: register_num 
-#returns $v0: address of counter
-get_register_counter_address:
-	la $v0,Register_counter_Array($a0)
+#prints the string stored in $a0
+printStr:
+	addi $v0,$zero,4
+	syscall
 	jr $ra
+	
+printInt:
+	addi $v0,$zero,1
+	syscall
+	jr $ra
+	
+printNewLine:
+	#pre
+	addi $sp,$sp,-4 #mark space on stack
+	sw $ra,0($sp) #save return addres
+	#body
+	la $a0,newline
+	jal printStr
+	#end
+	lw $ra,0($sp) #load returm addres
+	addi $sp,$sp,4 #free stack space
+	jr $ra #jump to return address
 
+printTableHead:
+	#pre
+	addi $sp,$sp,-4 #mark space on stack
+	sw $ra,0($sp) #save return addres
+	#body
+	la $a0,tableHead
+	jal printStr
+	jal printNewLine
+	#end
+	lw $ra,0($sp) #load returm addres
+	addi $sp,$sp,4 #free stack space
+	jr $ra #jump to return address
+	
+printSpaces:
+	#pre
+	addi $sp,$sp,-4 #mark space on stack
+	sw $ra,0($sp) #save return addres
+	#body
+	la $a0,tableSpaces
+	jal printStr
+	#end
+	lw $ra,0($sp) #load return address
+	addi $sp,$sp,4 #free stack space
+	jr $ra #jump to return address
+	
 End:
 li $v0,10
 syscall
