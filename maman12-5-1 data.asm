@@ -11,6 +11,7 @@ lw $t5,0($t3)
 beq $t1,$t1,label1
 add $0,$t0,$t1
 lw $0,0($t3)
+j label1
 label1:
 
  

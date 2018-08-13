@@ -21,7 +21,7 @@ sw_str:.asciiz          "sw                               "
 newline: .asciiz "\n"
 comma: .asciiz ","
 one_space:.asciiz " "
-
+error_message:.asciiz "Insraction is not valid! ending program"
 
 
 .text
@@ -43,69 +43,64 @@ main:
 	#if R type check if rd=0 and count registers of r type and increament r type command counter
 	lw $a0, theCode($s0)
 	jal is_R_type #$v0 is 1 if R type 0 else 
-	
 	beq $v0,0,check_is_beq #if not r type continue
 	#else:
 		#increament counter
 		lw $t1,R_type #load R_type counter to $t1
-		addi $t1,$zero,1 #increment R_type counter
+		addi $t1,$t1,1 #increment R_type counter
 		sw $t1,R_type #store incremented counter
 		lw $a0,theCode($s0) #load instraction code to param $a0 for procedure call
 		jal count_registers_in_R_type_command #count registers in R-type
-		
+		j next_instraction
 	#if beq check if registers are equal and increament beq counter then jump to i type counter logic
 	check_is_beq:
-	
+	lw $a0, theCode($s0)
+	jal is_beq #$v0 is 1 if insraction is beq else 0 
+	beq $v0,0,check_is_lw #if not beq instraction to check other instractions
+	#else:is beq
+		#increament counter
+		lw $t1,b_eq #load beq counter to $t1
+		addi $t1,$t1,1 #incrementbeq counter
+		sw $t1,b_eq #store incremented counter
+		
+		#check_same_registers and print message
+
+		j count_i
 	#if lw check if rt=0 then increament lw counter then jump to i type counter logic
-	
+	check_is_lw:
+	lw $a0, theCode($s0)
+	jal is_lw #$v0 is 1 if insraction is lw else 0 
+	beq $v0,0,check_is_sw #if not lw instraction to check other instractions
+		#else:
+		#increament counter
+		lw $t1,l_w #load lw counter to $t1
+		addi $t1,$t1,1 #increment lw counter
+		sw $t1,l_w #store incremented counter
+		j count_i
 	#if sw increament sw counter then jump to i type counter logic
+	check_is_sw:
+	lw $a0, theCode($s0)
+	jal is_sw #$v0 is 1 if insraction is sw else 0 
+	beq $v0,0,not_valid_inst #if not sw instraction then instraction is not valid (all valid options had been checked before)
+		#else:
+		#increament counter
+		lw $t1,s_w #load lw counter to $t1
+		addi $t1,$t1,1 #increment lw counter
+		sw $t1,s_w #store incremented counter
+		j count_i
+	count_i:
+	lw $a0,theCode($s0) #load instraction code to param $a0 for procedure call
+	jal count_registers_in_I_type_command
+	j next_instraction
 	
-	lw $a0,theCode($s0)
-	jal get_rs
+	not_valid_inst:
+	#print error message
+	la $a0,error_message
+	jal printStr
+	j End#end program
 
-	add $a0,$zero,$v0 
-	li $v0,	1
-	syscall 
-
-	li $v0, 4     	#print string
-	la $a0, comma   # load address of the comma string
 	syscall
-	
-	lw $a0,theCode($s0)
-	jal get_rt
-
-	add $a0,$zero,$v0 
-	li $v0,1
-	syscall 
-	
-	li $v0, 4     	#print string
-	la $a0, comma   # load address of the comma string
-	syscall
-	
-	lw $a0,theCode($s0)
-	jal get_rd
-	
-	
-	add $a0,$zero,$v0 
-	li $v0,1
-	syscall 
-	
-	li $v0, 4     	#print string
-	la $a0, comma   # load address of the comma string
-	syscall
-	
-	lw $a0,theCode($s0)
-	jal get_op_code
-	
-	add $a0,$zero,$v0 
-	li $v0,1
-	syscall 
-	
-	
-	li $v0, 4     #print string
-	la $a0, newline       # load address of the string
-	##### the code printing the register numbers is used for test only!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!11
-	syscall
+	next_instraction:
 	addi $s0,$s0,4
 	j countingLoop
 
@@ -119,8 +114,8 @@ printTable:
 	
 	printTableRegisterLoop:
 		lw $t0, Register_counter_Array($s0)
-		beq $t0,-1,end_printTableRegisterLoop
-
+		beq $t0,-1,end_printTableRegisterLoop #if counter is -1 then its the end of the counter array
+		beq $t0,0,next_regsiter #dont print counter set to zero
 		sra $s1,$s0,2#divide by 4 to get the register code (devide by shifting to places to the left)
 		move $a0,$s1
 		jal printInt #print register code
@@ -139,7 +134,7 @@ printTable:
 		jal printInt
 		
 		jal printNewLine
-		
+		next_regsiter:
 		addi $s0,$s0,4
 		j printTableRegisterLoop
 	end_printTableRegisterLoop:
@@ -228,6 +223,65 @@ is_R_type:
 	addi $sp,$sp,4 #free stack space
 	jr $ra
 	
+#return 1 for beq type and 0 for other (in $v0)
+#params $a0: instraction code
+is_beq:
+	#pre
+	addi $sp,$sp,-4 #mark space on stack
+	sw $ra,0($sp) #save return addres
+	#body
+	jal get_op_code# $v0 gets to be the op_code field
+	beq $v0,4,beq_instraction #if beq type branch to beq_instraction
+	#else (not beq)
+		addi $v0,$zero,0
+		j end_is_beq
+	beq_instraction:
+		addi $v0,$zero,1
+	#end
+	end_is_beq:
+	lw $ra,0($sp) #load return address
+	addi $sp,$sp,4 #free stack space
+	jr $ra
+	
+#return 1 for lw type and 0 for other (in $v0)
+#params $a0: instraction code
+is_lw:
+	#pre
+	addi $sp,$sp,-4 #mark space on stack
+	sw $ra,0($sp) #save return addres
+	#body
+	jal get_op_code# $v0 gets to be the op_code field
+	beq $v0,0x23,lw_instraction #if lw type branch to lw_instraction
+	#else (not lw)
+		addi $v0,$zero,0
+		j end_is_lw
+	lw_instraction:
+		addi $v0,$zero,1
+	#end
+	end_is_lw:
+	lw $ra,0($sp) #load return address
+	addi $sp,$sp,4 #free stack space
+	jr $ra
+	
+#return 1 for sw type and 0 for other (in $v0)
+#params $a0: instraction code
+is_sw:
+	#pre
+	addi $sp,$sp,-4 #mark space on stack
+	sw $ra,0($sp) #save return addres
+	#body
+	jal get_op_code# $v0 gets to be the op_code field
+	beq $v0,0x2b,sw_instraction #if sw type branch to sw_instraction
+	#else (not sw)
+		addi $v0,$zero,0
+		j end_is_sw
+	sw_instraction:
+		addi $v0,$zero,1
+	#end
+	end_is_sw:
+	lw $ra,0($sp) #load return address
+	addi $sp,$sp,4 #free stack space
+	jr $ra
 	
 #counts registers in R_type command
 #params $a0: command code 
@@ -244,6 +298,26 @@ count_registers_in_R_type_command:
 	jal count_rt
 	move $a0,$s0
 	jal count_rd
+	#end
+	lw $s0,4($sp) #load $s0
+	lw $ra,0($sp) #load returm addres
+	addi $sp,$sp,8 #free stack space
+	jr $ra #jump to return address
+	
+	
+#counts registers in I_type command
+#params $a0: command code 
+count_registers_in_I_type_command:
+	#pre
+	
+	addi $sp,$sp,-8 #mark space on stack
+	sw $ra,0($sp) #save return addres
+	sw $s0,4($sp) #save $s0
+	#body
+	move $s0,$a0 #store $a0 for later use
+	jal count_rs
+	move $a0,$s0
+	jal count_rt
 	#end
 	lw $s0,4($sp) #load $s0
 	lw $ra,0($sp) #load returm addres
