@@ -13,7 +13,7 @@ b_eq: .word 0
 
 #other string constants
 tableHead:.asciiz       "inst code/reg             appearances"
-tableSpaces:.asciiz     "                                "
+tableSpaces:.asciiz     "                               "
 R_type_str:.asciiz      "R-type                           "
 beq_str:.asciiz         "beq                              "
 lw_str:.asciiz          "lw                               "
@@ -270,6 +270,39 @@ printSpaces:
 	addi $sp,$sp,4 #free stack space
 	jr $ra #jump to return address
 	
+print_instraction_count_rows:
+	#pre
+	addi $sp,$sp,-4 #mark space on stack
+	sw $ra,0($sp) #save return addres
+	#body
+	#print R-type row
+	la $a0,R_type_str
+	jal printStr
+	lw $a0,R_type
+	jal printInt
+	jal printNewLine
+	#print lw row
+	la $a0,lw_str
+	jal printStr
+	lw $a0,l_w
+	jal printInt
+	jal printNewLine
+	#print sw row
+	la $a0,sw_str
+	jal printStr
+	lw $a0,s_w
+	jal printInt
+	jal printNewLine
+	#print b_eq row
+	la $a0,beq_str
+	jal printStr
+	lw $a0,b_eq
+	jal printInt
+	jal printNewLine
+	#end
+	lw $ra,0($sp) #load return address
+	addi $sp,$sp,4 #free stack space
+	jr $ra #jump to return address
 End:
 li $v0,10
 syscall
