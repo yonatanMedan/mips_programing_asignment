@@ -1,0 +1,7 @@
+ Address    Code        Basic                     Source
+
+0x00400000  0x8148fffd  lb $8,0xfffffffd($10) 2    nextCh: lb $t0,-3($t2)
+0x00400004  0x11000003  beq $8,$0,0x00000003  3    	beq $t0,$zero,strEnd
+0x00400008  0x0328c820  add $25,$25,$8        4    	add $t9,$t9,$t0
+0x0040000c  0x214afff4  addi $10,$10,0xfffffff5    	addi $t2,$t2,-12
+0x00400010  0x08100000  j 0x00400000          6    	j nextCh
