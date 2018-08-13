@@ -30,12 +30,22 @@ main:
 	lw $t0,theCode($s0)
 	
 	
-	beq $t0,-1,End # if on last command finish loop (uses the fact that the last theCode array item is 0xffffffff)
+	beq $t0,-1,printTable # if on last command finish loop (uses the fact that the last theCode array item is 0xffffffff)
 	##### the code printing the register numbers is used for test only!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!11
 	
-	#if R type check if rd=0 and count registers of r type
-	jal is_R_type
+	#if R type check if rd=0 and count registers of r type and increament r type command counter
+	lw $a0, theCode($s0)
+	jal is_R_type #$v0 is 1 if R type 0 else 
+	
+	beq $v0,0,check_is_beq #if not r type continue
+	#else:
+		#increament counter
+		lw $t1,R_type #load R_type counter to $t1
+		addi $t1,$zero,1 #increment R_type counter
+		sw $t1,R_type #store incremented counter
+		
 	#if beq check if registers are equal and increament beq counter then jump to i type counter logic
+	check_is_beq:
 	
 	#if lw check if rt=0 then increament lw counter then jump to i type counter logic
 	
@@ -91,6 +101,33 @@ main:
 	j countingLoop
 
 
+printTable:
+	jal printTableHead
+	jal print_instraction_count_rows
+
+	
+	addi $s0,$zero,0 #inittialize loop counter to zero
+	
+	printTableRegisterLoop:
+		lw $t0, Register_counter_Array($s0)
+		beq $t0,-1,end_printTableRegisterLoop
+		addi $a0,$s0,0 #load register code to $a0 for printing
+		jal printInt
+		
+		#print spaces
+		jal printSpaces
+		#print value of counter
+		lw $a0, Register_counter_Array($s0)
+		jal printInt
+		
+		jal printNewLine
+		j printTableRegisterLoop
+	end_printTableRegisterLoop:
+	
+j End
+
+
+
 #return 1 for R type and 0 for other (in $v0)
 #params $a0: instraction code
 is_R_type:
@@ -106,7 +143,7 @@ is_R_type:
 	R_type_instraction:
 		addi $v0,$zero,1
 	#end
-	end_is_R_type
+	end_is_R_type:
 	lw $ra,0($sp) #load return address
 	addi $sp,$sp,4 #free stack space
 	
