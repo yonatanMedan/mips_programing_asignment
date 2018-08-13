@@ -50,6 +50,8 @@ main:
 		lw $t1,R_type #load R_type counter to $t1
 		addi $t1,$zero,1 #increment R_type counter
 		sw $t1,R_type #store incremented counter
+		lw $a0,theCode($s0) #load instraction code to param $a0 for procedure call
+		jal count_registers_in_R_type_command #count registers in R-type
 		
 	#if beq check if registers are equal and increament beq counter then jump to i type counter logic
 	check_is_beq:
@@ -145,6 +147,66 @@ printTable:
 j End
 
 
+#counts register in rs_field
+#params $a0: instraction code
+count_rs:
+	#pre
+	addi $sp,$sp,-4 #mark space on stack
+	sw $ra,0($sp) #save return addres
+	#body
+	jal get_rs #v0 gets to be rs register code
+	move $a0,$v0 #saves register code stored in $v0 to $a0
+	jal increament_register_counter #inceament regiter counter for the code stored in $a0
+	#end
+	lw $ra,0($sp) #load return address
+	addi $sp,$sp,4 #free stack space
+	jr $ra
+
+#counts register in rt_field
+#params $a0: instraction code
+count_rt:
+	#pre
+	addi $sp,$sp,-4 #mark space on stack
+	sw $ra,0($sp) #save return addres
+	#body
+	jal get_rt #v0 gets to be rs register code
+	move $a0,$v0 #saves register code stored in $v0 to $a0
+	jal increament_register_counter #inceament regiter counter for the code stored in $a0
+	#end
+	lw $ra,0($sp) #load return address
+	addi $sp,$sp,4 #free stack space
+	jr $ra
+
+#counts register in rd_field
+#params $a0: instraction code
+count_rd:
+	#pre
+	addi $sp,$sp,-4 #mark space on stack
+	sw $ra,0($sp) #save return addres
+	#body
+	jal get_rd #v0 gets to be rs register code
+	move $a0,$v0 #saves register code stored in $v0 to $a0
+	jal increament_register_counter #inceament regiter counter for the code stored in $a0
+	#end
+	lw $ra,0($sp) #load return address
+	addi $sp,$sp,4 #free stack space
+	jr $ra
+
+#increament register at specified register code
+#params $a0: register_code
+increament_register_counter:
+	#pre
+	addi $sp,$sp,-4 #mark space on stack
+	sw $ra,0($sp) #save return addres
+	#body
+	sll $t1,$a0,2
+	lw $t0,Register_counter_Array($t1) #load register counter at given param
+	addi $t0,$t0,1 #increament param
+	sw $t0,Register_counter_Array($t1)#save register counter to given param
+	#end
+	lw $ra,0($sp) #load return address
+	addi $sp,$sp,4 #free stack space
+	jr $ra
 
 #return 1 for R type and 0 for other (in $v0)
 #params $a0: instraction code
@@ -171,16 +233,21 @@ is_R_type:
 #params $a0: command code 
 count_registers_in_R_type_command:
 	#pre
-	addi $sp,$sp,-4 #mark space on stack
+	
+	addi $sp,$sp,-8 #mark space on stack
 	sw $ra,0($sp) #save return addres
+	sw $s0,4($sp) #save $s0
 	#body
-	#get rs counter address
-	#get rt counter address
-	#get rd counter address
-	#increment Register_counter_Array
+	move $s0,$a0 #store $a0 for later use
+	jal count_rs
+	move $a0,$s0
+	jal count_rt
+	move $a0,$s0
+	jal count_rd
 	#end
+	lw $s0,4($sp) #load $s0
 	lw $ra,0($sp) #load returm addres
-	addi $sp,$sp,4 #free stack space
+	addi $sp,$sp,8 #free stack space
 	jr $ra #jump to return address
 
 #get rs register code from command
