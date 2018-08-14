@@ -1,5 +1,5 @@
 .data
-theCode: .word 0X11090006,0xad490004,0x018d5820,0x032dc020,0x032dc021,0x018d5824,0x8d6d0000,0xffffffff
+theCode: .word 0x01090020,0X11090006,0xad490004,0x018d5820,0x032dc020,0x032dc021,0x018d5824,0x8d6d0000,0x11290003,0x8d600000,0xffffffff
 
 #create an array of pointers to command counter addresses
 Command_counter_Addresses_Array: .word R_type,l_w,s_w,b_eq
@@ -22,8 +22,9 @@ newline: .asciiz "\n"
 comma: .asciiz ","
 one_space:.asciiz " "
 error_message:.asciiz "Insraction is not valid! ending program"
-
-
+rt_equals_rs_at_beq_message:.asciiz "Attention: rt and rs fields are equal in beq command in theCode Array at index: "
+zero_at_rt_in_lw: .asciiz "Attention: rt is zero in lw command in theCode Array at index: "
+zero_at_rd_in_R_type: .asciiz "Attention: rd is zero in R-type command in theCode Array at index: "
 .text
 #variables: $t0: array index
 
@@ -51,6 +52,11 @@ main:
 		sw $t1,R_type #store incremented counter
 		lw $a0,theCode($s0) #load instraction code to param $a0 for procedure call
 		jal count_registers_in_R_type_command #count registers in R-type
+		
+		#check if rd=0 and if so print message
+		lw $a0, theCode($s0) #load the instraction code to param $a0
+		move $a1,$s0 #load the loop counter to param $a1
+		jal handle_zero_at_rd #call procidure handing rd=0
 		j next_instraction
 	#if beq check if registers are equal and increament beq counter then jump to i type counter logic
 	check_is_beq:
@@ -63,7 +69,7 @@ main:
 		addi $t1,$t1,1 #incrementbeq counter
 		sw $t1,b_eq #store incremented counter
 		
-		#check_same_registers and print message
+		#check same registers (rt=rs) and print message
 		lw $a0, theCode($s0)
 		move $a1,$s0
 		jal handle_same_register
@@ -78,6 +84,10 @@ main:
 		lw $t1,l_w #load lw counter to $t1
 		addi $t1,$t1,1 #increment lw counter
 		sw $t1,l_w #store incremented counter
+		
+		lw $a0, theCode($s0)
+		move $a1,$s0
+		jal handle_zero_at_rt
 		j count_i
 	#if sw increament sw counter then jump to i type counter logic
 	check_is_sw:
@@ -148,18 +158,95 @@ j End
 #params $a1: counter
 handle_same_register:
 	#pre
+	addi $sp,$sp,-16 #mark space on stack
+	sw $ra,0($sp) #save return addres
+	sw $a1,4($sp) #save $a1 params (the loop index)
+	sw $s0,8($sp) #save $s0
+	sw $s1,12($sp) #save $s1
+	#body
+	move $s0,$a0 #save the instraction code to $s0
+	jal get_rt #returns in $v0 the register code.
+	move $s1,$v0 #save rt code to $s1
+	move $a0,$s0 #load the instractio code
+	jal get_rs#returns in $v0 the register code.
+	bne $v0,$s1,end_handle_same_register #if the registers are different return to caller with out printing message
+	#else:
+	#print message
+	la $a0,rt_equals_rs_at_beq_message
+	jal printStr
+	
+	lw $a0,4($sp) #load loop index from stack
+	sra $a0,$a0,2 #devide by 4 to get the array index number
+	jal printInt #print index number
+	jal printNewLine #print new line
+	end_handle_same_register:
+	#end
+	lw $ra,0($sp) #load return address
+	lw $s0,8($sp) #load $s0
+	lw $s1,12($sp) #load $s1
+	addi $sp,$sp,16 #free stack space
+	jr $ra
+
+#check if rt is zero (to use if lw instraction only)
+#params $a0: instraction code
+#params $a1: counter
+handle_zero_at_rt:
+	#pre
 	addi $sp,$sp,-12 #mark space on stack
 	sw $ra,0($sp) #save return addres
 	sw $a1,4($sp) #save $a1 params (the loop index)
 	sw $s0,8($sp) #save $s0
 	#body
-	jal get_rt
+	move $s0,$a0 #save the instraction code to $s0
+	jal get_rt #returns in $v0 the register code.
 	
+	bne $v0,$zero,end_handle_zero_at_rt #if the registers is not zero end and return to caller with out printing a message
+	#else:
+	#print message
+	la $a0,zero_at_rt_in_lw
+	jal printStr
+	
+	lw $a0,4($sp) #load loop index from stack
+	sra $a0,$a0,2 #devide by 4 to get the array index number
+	jal printInt #print index number
+	jal printNewLine #print new line
+	end_handle_zero_at_rt:
 	#end
 	lw $ra,0($sp) #load return address
 	lw $s0,8($sp) #load $s0
 	addi $sp,$sp,12 #free stack space
 	jr $ra
+	
+#check if rd is zero (to use if R-type instraction only)
+#params $a0: instraction code
+#params $a1: counter
+handle_zero_at_rd:
+	#pre
+	addi $sp,$sp,-12 #mark space on stack
+	sw $ra,0($sp) #save return addres
+	sw $a1,4($sp) #save $a1 params (the loop index)
+	sw $s0,8($sp) #save $s0
+	#body
+	move $s0,$a0 #save the instraction code to $s0
+	jal get_rd #returns in $v0 the register code.
+	
+	bne $v0,$zero,end_handle_zero_at_rd #if the registers is not zero end and return to caller with out printing a message
+	#else:
+	#print message
+	la $a0,zero_at_rd_in_R_type
+	jal printStr
+	
+	lw $a0,4($sp) #load loop index from stack
+	sra $a0,$a0,2 #devide by 4 to get the array index number
+	jal printInt #print index number
+	jal printNewLine #print new line
+	end_handle_zero_at_rd:
+	#end
+	lw $ra,0($sp) #load return address
+	lw $s0,8($sp) #load $s0
+	addi $sp,$sp,12 #free stack space
+	jr $ra #return to caller
+
 
 #counts register in rs_field
 #params $a0: instraction code
